@@ -1,16 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * scx_fifo_stats: read per-process FIFO statistics from a pinned map.
- *
- * Works with:
- *   - scx_fifo  (pins /sys/fs/bpf/scx_fifo/proc_stats)
- *   - scx_mlfq  FIFO level only (pins /sys/fs/bpf/scx_mlfq/proc_stats)
- *
- * Metrics:
- *   - Average waiting time (enqueue -> run start)
- *   - Context switch count (switches into the process)
- *   - CPU usage (total CPU time while running)
- */
 #include <bpf/bpf.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -41,8 +28,7 @@ static void usage(const char *prog)
 {
 	fprintf(stderr,
 		"Usage: %s [-p PIN_PATH] [-n TOPN]\n\n"
-		"  -p PIN_PATH   Pinned map path (default: /sys/fs/bpf/scx_fifo/proc_stats)\n"
-		"               (for MLFQ FIFO: /sys/fs/bpf/scx_mlfq/proc_stats)\n"
+		"  -p PIN_PATH   Pinned map path (default: /sys/fs/bpf/scx_fifo_capture/proc_stats)\n"
 		"  -n TOPN       Print top N processes by CPU time (default: all)\n",
 		prog);
 }
@@ -82,7 +68,7 @@ static double ns_to_ms(__u64 ns)
 
 int main(int argc, char **argv)
 {
-	const char *pin_path = "/sys/fs/bpf/scx_fifo/proc_stats";
+	const char *pin_path = "/sys/fs/bpf/scx_fifo_capture/proc_stats";
 	long topn = -1;
 	int opt;
 	int fd;
