@@ -207,14 +207,14 @@ def prepare_data(file_path, merge_gap_ns=DEFAULT_MERGE_GAP_NS, max_duration_ns=D
 
         df = df[df["duration_ns"] <= max_duration_ns].reset_index(drop=True)
 
-    # Now merge only the cleaned microslices
-    df_merged = merge_slices(
-        df,
-        merge_gap_ns=merge_gap_ns,
-        max_duration_ns=None  # <-- IMPORTANT: do NOT filter again after merge
-    )
+    # No need to merge now that the scheduler is validated and we know exactly one process runs at a time
+    # df_merged = merge_slices(
+    #     df,
+    #     merge_gap_ns=merge_gap_ns,
+    #     max_duration_ns=None  # <-- IMPORTANT: do NOT filter again after merge
+    # )
     # consolidate stuff
-    df_merged = consolidate_adjacent_by_pid(df_merged, pid_col="pid")
+    df_merged = consolidate_adjacent_by_pid(df, pid_col="pid")
 
     # Build color map
     if "child_index" in df_merged.columns:
