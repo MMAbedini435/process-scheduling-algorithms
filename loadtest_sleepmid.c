@@ -96,8 +96,8 @@ int main(int argc, char **argv) {
     if (min_work_iters == 0) min_work_iters = 1;
     if (max_work_iters < min_work_iters) max_work_iters = min_work_iters;
     
-    /* open log file (append) -- child processes inherit this FD */
-    int logfd = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    /* open log file (replace) -- child processes inherit this FD */
+    int logfd = open(log_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (logfd < 0) die("open(%s): %s\n", log_path, strerror(errno));
     
     /* write CSV header (only once per run) */

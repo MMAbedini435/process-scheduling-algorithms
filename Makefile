@@ -8,18 +8,19 @@ TARGET  := bin/loadtest
 SRC     := loadtest.c
 
 # Command to run before targets
-SCX_CMD := sudo scx_fifo
+SCX_CMD := scx_fifo
 
 # Default runtime parameters (can override on command line)
 MAX_PROCS ?= 20
 SEED      ?= 2
 CPU       ?= 0
-LOG       ?= log/runlog.csv
+LOG       ?= log/out.csv
+TOTAL_LOG ?= log/runlog.csv
 DELAY     ?= 10
 MIN_ITERS ?= 1000000
 MAX_ITERS ?= 5000000
 
-.PHONY: all clean run sudo-run debug
+.PHONY: all clean run debug
 
 all: $(TARGET)
 
@@ -33,7 +34,7 @@ run: $(TARGET)
 	@echo "Starting scx_fifo..."
 	@bash -c '\
 		set -e; \
-		$(SCX_CMD) & \
+		sudo $(SCX_CMD) & \
 		SCX_PID=$$!; \
 		echo "scx_fifo PID: $$SCX_PID"; \
 		sleep 2; \
@@ -45,35 +46,19 @@ run: $(TARGET)
 			-d $(DELAY) \
 			-w $(MIN_ITERS) \
 			-W $(MAX_ITERS); \
+		echo "Appending to total log...";\
+		cat $(LOG) >> $(TOTAL_LOG); \
 		echo "Target finished. Waiting 2 seconds..."; \
 		sleep 2; \
 		echo "Stopping scx_fifo..."; \
 		kill -INT $$SCX_PID; \
 		wait $$SCX_PID || true; \
 	'
-
-# Use this if sched_setscheduler requires CAP_SYS_NICE
-sudo-run: $(TARGET)
-	@echo "Starting scx_fifo..."
-	@bash -c '\
-		set -e; \
-		$(SCX_CMD) & \
-		SCX_PID=$$!; \
-		echo "scx_fifo PID: $$SCX_PID"; \
-		sudo ./$(TARGET) \
-			-m $(MAX_PROCS) \
-			-s $(SEED) \
-			-c $(CPU) \
-			-o $(LOG) \
-			-d $(DELAY) \
-			-w $(MIN_ITERS) \
-			-W $(MAX_ITERS); \
-		echo "Target finished. Waiting 2 seconds..."; \
-		sleep 2; \
-		echo "Stopping scx_fifo..."; \
-		kill -INT $$SCX_PID; \
-		wait $$SCX_PID || true; \
-	'
+	@echo "Generating plots..."
+	@set -e; \
+	ts=$$(date +%Y%m%d_%H%M%S); \
+	python3 plot.py --input $(LOG) --output "plots/$${ts}_1D.png" --no-gui --mode 1d; \
+	python3 plot.py --input $(LOG) --output "plots/$${ts}_2D.png" --no-gui --mode 2d; \
 
 clean:
 	rm -f $(TARGET)
