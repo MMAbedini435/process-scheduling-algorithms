@@ -2,8 +2,10 @@
 
 CC      := gcc
 CFLAGS  := -O2 -std=gnu11 -Wall -Wextra -D_GNU_SOURCE
+STAT_FLAGS	:= -O2 -Wall
 LDFLAGS :=
 BIN_DIR := bin
+CAPTURE_CMD := :
 
 TARGET   := $(BIN_DIR)/loadtest
 SRC      := loadtest.c
@@ -29,6 +31,7 @@ MAX_ITERS ?= 5000000
 ########################################
 
 all: $(TARGET) $(STAT_BIN)
+build_stat: $(STAT_BIN)
 
 $(TARGET): $(SRC)
 	@mkdir -p $(BIN_DIR)
@@ -36,7 +39,7 @@ $(TARGET): $(SRC)
 
 $(STAT_BIN): $(STAT_SRC)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $< -o $@ -lbpf
+	$(CC) $(STAT_FLAGS) $< -o $@ -lbpf
 
 debug:
 	@mkdir -p $(BIN_DIR)
@@ -52,8 +55,8 @@ run_fifo: run
 # MLFQ run target
 ########################################
 run_mlfq: SCX_CMD=scx_mlfq
-run_mlfq: MIN_ITERS=2000000
-run_mlfq: MAX_ITERS=10000000
+run_mlfq: MIN_ITERS=20000000
+run_mlfq: MAX_ITERS=100000000
 run_mlfq: PLOTTER=plot_micro.py
 run_mlfq: run
 
