@@ -127,17 +127,6 @@ int main(int argc, char **argv) {
     
     for (int i = 0; i < nprocs; ++i) {
         
-        struct timespec ts_arrive;
-        if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_arrive)!= 0) {
-            dprintf(logfd, "ERR: pid=%d clock_gettime start failed: %s\n", getpid(), strerror(errno));
-            _exit(1);
-        } 
-        /* random delay (so children start at random times) */
-        int delay_ms = (max_start_delay_ms > 0) ? (rand() % (max_start_delay_ms + 1)) : 0;
-        uint64_t arrive_ns = timespec_to_ns(&ts_arrive) + delay_ms * 1000000ULL;
-        if (delay_ms > 0) {
-            usleep((useconds_t)delay_ms * 1000);
-        }
         pid_t pid = fork();
         if (pid < 0) {
             die("fork failed: %s\n", strerror(errno));
@@ -168,15 +157,26 @@ int main(int argc, char **argv) {
             if (max_work_iters > min_work_iters) {
                 work_iters = min_work_iters + (uint64_t)(rand() % (1 + (int)(max_work_iters - min_work_iters)));
             }
+            struct timespec ts_arrive;
+            if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_arrive)!= 0) {
+                dprintf(logfd, "ERR: pid=%d clock_gettime start failed: %s\n", getpid(), strerror(errno));
+                _exit(1);
+            } 
+            /* random delay (so children start at random times) */
+            int delay_ms = (max_start_delay_ms > 0) ? (rand() % (max_start_delay_ms + 1)) : 0;
+            uint64_t arrive_ns = timespec_to_ns(&ts_arrive) + delay_ms * 1000000ULL;
+            if (delay_ms > 0) {
+                usleep((useconds_t)delay_ms * 1000);
+            }
             
-
+            
             /* Memory to store timestamps (captured while the process is actually running) */
             struct timespec ts_start, ts_end;
-
+            
             /* IMPORTANT:
-             * The first clock_gettime() and the following busy-loop happen while the
-             * process is actually running on CPU (i.e., the measurement marks the time
-             * when the process first executes the busy loop). We avoid syscalls
+            * The first clock_gettime() and the following busy-loop happen while the
+            * process is actually running on CPU (i.e., the measurement marks the time
+            * when the process first executes the busy loop). We avoid syscalls
              * in between to prevent voluntary context switches during measured interval.
              */
             if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_start) != 0) {
