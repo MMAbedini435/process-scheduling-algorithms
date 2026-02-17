@@ -38,7 +38,7 @@ enum {
 const volatile u64 rr_slice_ns = 50ULL * 1000ULL * 1000ULL;
 
 /* Bottom queue slice (ns). Default: SCX_SLICE_DFL. */
-const volatile u64 fifo_slice_ns = SCX_SLICE_DFL;
+const volatile u64 fifo_slice_ns = 200ULL * 1000ULL * 1000ULL;
 
 struct task_ctx {
 	u8	level;
@@ -93,7 +93,7 @@ s32 BPF_STRUCT_OPS(mlfq_select_cpu, struct task_struct *p, s32 prev_cpu,
 	if (!is_idle)
 		return cpu;
 
-	/* If we're dispatching directly to local, honor the task's current level. */
+	/* If we're dispatching directly to local, use the task's current level. */
 	tctx = get_tctx(p);
 	if (tctx) {
 		u64 slice = slice_for_level(tctx->level);

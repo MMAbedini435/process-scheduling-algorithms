@@ -10,7 +10,6 @@
 #define PATH_MAX 4096
 #endif
 
-/* Must match the pinned map value layout (4x u64 in this order). */
 struct proc_stats_val {
 	__u64 total_wait_ns;
 	__u64 wait_events;
@@ -153,9 +152,9 @@ int main(int argc, char **argv)
 	printf("Total CPU time: %.3f ms | Total context switches (in): %" PRIu64 "\n\n",
 		ns_to_ms(sum_cpu_ns), (uint64_t)sum_cs);
 
-	printf("%-8s %-20s %12s %8s %12s %14s %12s\n",
-		"TGID", "COMM", "CPU(ms)", "CPU%", "CS(in)", "AvgWait(ms)", "WaitEv");
-	printf("----------------------------------------------------------------------------------------------\n");
+	printf("%-8s %12s %8s %12s %14s %12s\n",
+		"TGID", "CPU(ms)", "CPU%", "CS(in)", "AvgWait(ms)", "WaitEv");
+	printf("-----------------------------------------------------------------\n");
 
 	long limit = (topn > 0 && (size_t)topn < cnt) ? topn : (long)cnt;
 	for (long i = 0; i < limit; i++) {
@@ -166,8 +165,8 @@ int main(int argc, char **argv)
 		if (r->v.wait_events)
 			avg_wait_ms = ns_to_ms(r->v.total_wait_ns / r->v.wait_events);
 
-		printf("%-8u %-20.20s %12.3f %7.2f%% %12" PRIu64 " %14.3f %12" PRIu64 "\n",
-			r->tgid, r->comm, cpu_ms, cpu_pct,
+		printf("%-8u %12.3f %7.2f%% %12" PRIu64 " %14.3f %12" PRIu64 "\n",
+			r->tgid, cpu_ms, cpu_pct,
 			(uint64_t)r->v.cs_in,
 			avg_wait_ms,
 			(uint64_t)r->v.wait_events);

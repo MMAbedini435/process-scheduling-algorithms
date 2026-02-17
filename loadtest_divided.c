@@ -135,6 +135,23 @@ int main(int argc, char **argv) {
         /* random delay (so children start at random times) */
         int delay_ms = (max_start_delay_ms > 0) ? (rand() % (max_start_delay_ms + 1)) : 0;
         uint64_t arrive_ns = timespec_to_ns(&ts_arrive) + delay_ms * 1000000ULL;
+        /* compute work iterations (random) */
+        /* Use rand() inherited from parent; fork copies RNG state so deterministic */
+        uint64_t work_iters = min_work_iters;
+        if (max_work_iters > min_work_iters) {
+            work_iters = min_work_iters + (uint64_t)(rand() % (1 + (int)(max_work_iters - min_work_iters)));
+        }
+        /* number of slices */
+        uint64_t slices = (work_iters + unit_iters - 1) / unit_iters;
+        if (slices == 0) slices = 1;
+
+        /* allocate arrays to store timestamps for each slice */
+        uint64_t *start_ns_arr = calloc((size_t)slices, sizeof(uint64_t));
+        uint64_t *end_ns_arr   = calloc((size_t)slices, sizeof(uint64_t));
+        if (!start_ns_arr || !end_ns_arr) {
+            dprintf(logfd, "ERR: pid=%d failed to allocate timestamp arrays\n", getpid());
+            _exit(1);
+        }
         if (delay_ms > 0) {
             usleep((useconds_t)delay_ms * 1000);
         }
@@ -143,45 +160,6 @@ int main(int argc, char **argv) {
             die("fork failed: %s\n", strerror(errno));
         } else if (pid == 0) {
             /* child */
-            
-            /* set scheduling policy to SCHED_EXT (if supported) */
-            struct sched_param sp;
-            sp.sched_priority = 0; /* sched_ext uses its own semantics (priority ignored here) */
-            if (sched_setscheduler(0, SCHED_EXT, &sp) != 0) {
-                /* Not fatal — if kernel doesn't have SCHED_EXT this will fail.
-                * We log the error and proceed; scheduling will remain normal (CFS).
-                * These logs happen before measurement loop.
-                */
-               dprintf(logfd, "WARN: pid=%d sched_setscheduler(SCHED_EXT) failed: %s\n", getpid(), strerror(errno));
-            }
-            /* set CPU affinity to the chosen core */
-            cpu_set_t cpuset;
-            CPU_ZERO(&cpuset);
-            CPU_SET(cpu_core, &cpuset);
-            if (sched_setaffinity(0, sizeof(cpuset), &cpuset) != 0) {
-                /* affinity failure is non-fatal; we continue but warn */
-                dprintf(logfd, "WARN: pid=%d failed to set affinity to cpu %d: %s\n", getpid(), cpu_core, strerror(errno));
-            }
-            
-            /* compute work iterations (random) */
-            /* Use rand() inherited from parent; fork copies RNG state so deterministic */
-            uint64_t work_iters = min_work_iters;
-            if (max_work_iters > min_work_iters) {
-                work_iters = min_work_iters + (uint64_t)(rand() % (1 + (int)(max_work_iters - min_work_iters)));
-            }
-
-            /* number of slices */
-            uint64_t slices = (work_iters + unit_iters - 1) / unit_iters;
-            if (slices == 0) slices = 1;
-
-            /* allocate arrays to store timestamps for each slice */
-            uint64_t *start_ns_arr = calloc((size_t)slices, sizeof(uint64_t));
-            uint64_t *end_ns_arr   = calloc((size_t)slices, sizeof(uint64_t));
-            if (!start_ns_arr || !end_ns_arr) {
-                dprintf(logfd, "ERR: pid=%d failed to allocate timestamp arrays\n", getpid());
-                _exit(1);
-            }
-
             /* perform measured slices, storing timestamps (no logging during loop) */
             struct timespec ts_start, ts_end;
             uint64_t remaining = work_iters;
@@ -295,6 +273,24 @@ int main(int argc, char **argv) {
         } else {
             /* parent */
             children[i] = pid;
+             /* set scheduling policy to SCHED_EXT (if supported) */
+            struct sched_param sp;
+            sp.sched_priority = 0; /* sched_ext uses its own semantics (priority ignored here) */
+            if (sched_setscheduler(pid, SCHED_EXT, &sp) != 0) {
+                /* Not fatal — if kernel doesn't have SCHED_EXT this will fail.
+                * We log the error and proceed; scheduling will remain normal (CFS).
+                * These logs happen before measurement loop.
+                */
+               dprintf(logfd, "WARN: pid=%d sched_setscheduler(SCHED_EXT) failed: %s\n", getpid(), strerror(errno));
+            }
+            /* set CPU affinity to the chosen core */
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            CPU_SET(cpu_core, &cpuset);
+            if (sched_setaffinity(pid, sizeof(cpuset), &cpuset) != 0) {
+                /* affinity failure is non-fatal; we continue but warn */
+                dprintf(logfd, "WARN: pid=%d failed to set affinity to cpu %d: %s\n", getpid(), cpu_core, strerror(errno));
+            }
         }
     }
 

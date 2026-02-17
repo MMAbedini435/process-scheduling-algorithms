@@ -55,8 +55,9 @@ run_fifo: run
 # MLFQ run target
 ########################################
 run_mlfq: SCX_CMD=scx_mlfq
-run_mlfq: MIN_ITERS=20000000
-run_mlfq: MAX_ITERS=100000000
+run_mlfq: MIN_ITERS=8000000
+run_mlfq: MAX_ITERS=40000000
+run_mlfq: DELAY=200
 run_mlfq: PLOTTER=plot_micro.py
 run_mlfq: run
 

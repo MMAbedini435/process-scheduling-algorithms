@@ -235,6 +235,7 @@ def plot_2d_gantt(file_path, merge_gap_ns=DEFAULT_MERGE_GAP_NS, max_duration_ns=
     2D Gantt: horizontal bars per pid.
     Ensures all rectangles of the same PID have the same color.
     Uses merged slices.
+    Highlights the first 50 ms interval.
     """
     df_merged, _ = prepare_data(
         file_path,
@@ -248,6 +249,26 @@ def plot_2d_gantt(file_path, merge_gap_ns=DEFAULT_MERGE_GAP_NS, max_duration_ns=
         ax.text(0.5, 0.5, "No data after merging/filtering",
                 ha="center", va="center")
         return fig
+
+    # -------------------------------------------------
+    # Highlight first 50 ms interval
+    # -------------------------------------------------
+    interval_50ms_ns = 50_000_000  # 50 ms in nanoseconds
+
+    ax.axvspan(
+        0,
+        interval_50ms_ns,
+        color="gray",
+        alpha=0.15,
+        label="First 50 ms"
+    )
+
+    ax.axvline(
+        interval_50ms_ns,
+        color="red",
+        linestyle="--",
+        linewidth=1.5
+    )
 
     # -------------------------------------------------
     # Build PID → color map
@@ -276,7 +297,7 @@ def plot_2d_gantt(file_path, merge_gap_ns=DEFAULT_MERGE_GAP_NS, max_duration_ns=
             width=width,
             left=start,
             height=0.6,
-            color=pid_to_color[pid],   # <-- consistent color
+            color=pid_to_color[pid],
             edgecolor="black",
             alpha=0.9
         )
@@ -286,12 +307,19 @@ def plot_2d_gantt(file_path, merge_gap_ns=DEFAULT_MERGE_GAP_NS, max_duration_ns=
     ax.set_title("OS Scheduling Gantt Chart (merged microslices)")
     ax.grid(True, axis='x', linestyle='--', alpha=0.4)
 
-    # Optional: Legend
+    # -------------------------------------------------
+    # Legend
+    # -------------------------------------------------
     handles = [
         plt.Line2D([0], [0], color=pid_to_color[pid], lw=6)
         for pid in unique_pids
     ]
     labels = [f"PID {pid}" for pid in unique_pids]
+
+    # Add interval legend entry
+    handles.append(plt.Line2D([0], [0], color="gray", lw=6, alpha=0.3))
+    labels.append("First 50 ms")
+
     ax.legend(handles, labels, bbox_to_anchor=(1.02, 1.0),
               loc="upper left", fontsize=8)
 
